@@ -71,8 +71,7 @@ if file1 and file2:
 
         st.subheader("🔑 Resultados del Matching")
         st.image(cv2.cvtColor(img_matches, cv2.COLOR_BGR2RGB),
-                 caption=f"Top {N_MATCHES} coincidencias encontradas con {method}",
-                 use_container_width=True)
+         caption=f"Top {N_MATCHES} coincidencias encontradas con {method}")
         st.success(f"Se detectaron {len(matches)} coincidencias entre las imágenes")
     else:
         st.error("No se pudieron calcular descriptores en una de las imágenes.")
