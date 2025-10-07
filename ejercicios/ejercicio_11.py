@@ -27,7 +27,7 @@ def ejercicio_11():
     # Cargar modelo
     try:
         with st.spinner("Cargando modelo..."):
-            model = tf.keras.models.load_model(model_path)
+            model = tf.keras.models.load_model(model_path, compile=False)
         st.success("✅ Modelo cargado correctamente")
         
         # Mostrar información del modelo
