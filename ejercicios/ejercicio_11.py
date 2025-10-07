@@ -91,8 +91,8 @@ def ejercicio_11():
         col1, col2 = st.columns(2)
         with col1:
             # MODIFICACIÓN: Usamos el objeto uploaded_file (UploadedFile) directamente para el display de Streamlit,
-            # ya que es más robusto y compatible para la visualización.
-            st.image(uploaded_file, caption="Imagen cargada", use_container_width=True)
+            # y reemplazamos 'use_container_width' por 'use_column_width' para mayor compatibilidad.
+            st.image(uploaded_file, caption="Imagen cargada", use_column_width=True)
 
         try:
             # 1. Pre-procesamiento
