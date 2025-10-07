@@ -85,15 +85,19 @@ def ejercicio_11():
     )
 
     if uploaded_file is not None:
-        # Cargar y mostrar imagen
+        # Cargar y preparar la imagen PIL para el modelo
         image = Image.open(uploaded_file).convert("RGB")
+        
         col1, col2 = st.columns(2)
         with col1:
-            st.image(image, caption="Imagen cargada", use_container_width=True)
+            # MODIFICACIÓN: Usamos el objeto uploaded_file (UploadedFile) directamente para el display de Streamlit,
+            # ya que es más robusto y compatible para la visualización.
+            st.image(uploaded_file, caption="Imagen cargada", use_container_width=True)
 
         try:
             # 1. Pre-procesamiento
             # Redimensionar según la forma de entrada del modelo (ej. 150x150)
+            # USAMOS el objeto 'image' (PIL) que cargamos ANTES
             img = image.resize((img_size, img_size))
             img_array = np.array(img).astype("float32") / 255.0
             # Añadir dimensión de lote (Batch: 1) -> (1, H, W, 3)
