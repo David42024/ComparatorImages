@@ -7,6 +7,8 @@ import os
 # Variable global para almacenar el nombre del tensor de entrada
 # Se inicializará al cargar el modelo
 INPUT_TENSOR_NAME = None 
+# Nueva variable global para almacenar el nombre del tensor de salida
+OUTPUT_TENSOR_NAME = None
 
 def ejercicio_11():
     # Línea eliminada: st.set_page_config(page_title="Clasificador de Perros y Gatos", layout="centered") 
@@ -22,6 +24,7 @@ def ejercicio_11():
     infer = None
     input_shape = None
     global INPUT_TENSOR_NAME
+    global OUTPUT_TENSOR_NAME
 
     # Verificar que existe el modelo
     if not os.path.exists(model_path):
@@ -58,8 +61,19 @@ def ejercicio_11():
             # 4. Extraer la forma de entrada
             input_shape = input_kwargs[INPUT_TENSOR_NAME].shape
 
+            # 5. Extraer el nombre de la clave del output de forma dinámica
+            output_kwargs = infer.structured_outputs
+
+            if not output_kwargs:
+                st.error("❌ La firma del modelo no tiene argumentos de salida esperados.")
+                return
+
+            # Tomar el nombre del primer (y generalmente único) output
+            OUTPUT_TENSOR_NAME = list(output_kwargs.keys())[0]
+
         st.success("✅ Modelo cargado correctamente")
         st.write(f"**Nombre del tensor de entrada detectado:** `{INPUT_TENSOR_NAME}`")
+        st.write(f"**Nombre del tensor de salida detectado:** `{OUTPUT_TENSOR_NAME}`")
         st.write(f"**Forma de entrada del modelo:** {input_shape}")
     except Exception as e:
         # Esto capturará el error original del usuario y cualquier otro
@@ -91,7 +105,7 @@ def ejercicio_11():
         col1, col2 = st.columns(2)
         with col1:
             # MODIFICACIÓN: Usamos el objeto uploaded_file (UploadedFile) directamente para el display de Streamlit,
-            # y reemplazamos 'use_container_width' por 'use_column_width' para mayor compatibilidad.
+            # y usamos 'use_column_width' para compatibilidad.
             st.image(uploaded_file, caption="Imagen cargada", use_column_width=True)
 
         try:
@@ -107,11 +121,10 @@ def ejercicio_11():
             input_tensor = tf.convert_to_tensor(img_array, dtype=tf.float32)
             
             # Usamos el nombre del tensor detectado para pasar el argumento:
-            # {nombre_tensor: input_tensor}
             pred_result = infer(**{INPUT_TENSOR_NAME: input_tensor})
             
-            # Asumimos que la salida se llama 'output_1' y es una probabilidad binaria (0-1)
-            pred = pred_result["output_1"].numpy()[0][0] 
+            # MODIFICACIÓN: Usamos el nombre del tensor de salida detectado dinámicamente
+            pred = pred_result[OUTPUT_TENSOR_NAME].numpy()[0][0] 
 
             # 3. Interpretar resultado
             es_gato = pred < 0.5
