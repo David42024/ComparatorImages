@@ -3,3 +3,4 @@ numpy<2
 pillow<10
 opencv-python-headless==4.8.0.76
 opencv-contrib-python-headless==4.8.0.76
+tensorflow==2.14.0  # o la versión que uses localmente
