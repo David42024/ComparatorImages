@@ -8,60 +8,41 @@ def ejercicio_11():
     st.title("Ejercicio 11 - Clasificador de Perros y Gatos 🐶🐱")
     st.markdown("### Usando Red Neuronal Convolucional (CNN)")
 
-    # Ruta del modelo exportado
     model_path = "modelo_entrenado/clasificador_gatos_perros_tf"
 
-    # Verificar que existe el modelo
     if not os.path.exists(model_path):
         st.error("⚠️ No se encontró el modelo entrenado")
-        st.info(f"📝 El modelo debe estar en: `{model_path}`")
-        st.markdown("""
-        ### Para entrenar un modelo:
-        1. Descarga el dataset de Kaggle: [Dogs vs Cats](https://www.kaggle.com/c/dogs-vs-cats/data)
-        2. Entrena un modelo con TensorFlow/Keras
-        3. Exporta el modelo usando `model.export("modelo_entrenado/clasificador_gatos_perros_tf")`
-        """)
+        st.info(f"📝 Debe estar en: `{model_path}`")
         return
 
-    # Cargar modelo
     try:
         with st.spinner("Cargando modelo..."):
             model = tf.keras.models.load_model(model_path)
-            # Obtener la función de inferencia
             infer = model.signatures["serving_default"]
-            # Obtener la forma de entrada
             input_shape = infer.structured_input_signature[1]["input_1"].shape
-        st.success("✅ Modelo cargado correctamente")
-        st.write(f"**Forma de entrada del modelo:** {input_shape}")
+        st.success("✅ Modelo cargado")
     except Exception as e:
         st.error(f"❌ Error cargando el modelo: {e}")
         return
 
-    # Subir imagen
     uploaded_file = st.file_uploader(
         "Sube una imagen para clasificar",
         type=["jpg", "jpeg", "png", "webp"]
     )
 
-    if uploaded_file is not None:
-        # Cargar y mostrar imagen
+    if uploaded_file:
         image = Image.open(uploaded_file).convert("RGB")
         col1, col2 = st.columns(2)
         with col1:
             st.image(image, caption="Imagen cargada", use_container_width=True)
 
         try:
-            # Redimensionar según la forma de entrada del modelo
             img_size = input_shape[1]
             img = image.resize((img_size, img_size))
-            img_array = np.array(img).astype("float32") / 255.0
-            img_array = np.expand_dims(img_array, axis=0)  # (1, H, W, 3)
-
-            # Convertir a tensor y predecir
+            img_array = np.expand_dims(np.array(img)/255.0, axis=0)
             input_tensor = tf.convert_to_tensor(img_array, dtype=tf.float32)
             pred = infer(input_1=input_tensor)["output_1"].numpy()[0][0]
 
-            # Interpretar resultado
             es_gato = pred < 0.5
             clase = "🐱 Gato" if es_gato else "🐶 Perro"
             confianza = (1 - pred) if es_gato else pred
@@ -71,27 +52,9 @@ def ejercicio_11():
                 st.markdown(f"## **{clase}**")
                 st.progress(confianza)
                 st.caption(f"Confianza: {confianza*100:.2f}%")
-                st.caption(f"Valor de predicción: {pred:.4f}")
-
-                if confianza > 0.8:
-                    st.success("✅ Alta confianza")
-                elif confianza > 0.6:
-                    st.info("⚡ Confianza moderada")
-                else:
-                    st.warning("⚠️ Baja confianza - La imagen podría ser ambigua")
-
-            with st.expander("📊 Probabilidades detalladas"):
-                st.write("**Gato 🐱:**", f"{(1-pred)*100:.2f}%")
-                st.write("**Perro 🐶:**", f"{pred*100:.2f}%")
 
         except Exception as e:
             st.error(f"❌ Error en la clasificación: {e}")
-            st.exception(e)
-
-    # Footer
-    st.markdown("---")
-    st.caption("💡 **Tip:** Para mejores resultados, usa imágenes claras donde el animal sea el foco principal")
-
 
 if __name__ == "__main__":
     ejercicio_11()
