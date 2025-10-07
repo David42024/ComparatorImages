@@ -9,7 +9,8 @@ import os
 INPUT_TENSOR_NAME = None 
 
 def ejercicio_11():
-    st.set_page_config(page_title="Clasificador de Perros y Gatos", layout="centered")
+    # Línea eliminada: st.set_page_config(page_title="Clasificador de Perros y Gatos", layout="centered") 
+    
     st.title("Ejercicio 11 - Clasificador de Perros y Gatos 🐶🐱")
     st.markdown("### Usando Red Neuronal Convolucional (CNN)")
 
