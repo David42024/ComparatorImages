@@ -7,20 +7,14 @@ def ejercicio_10():
     st.title("🧱 Realidad Aumentada – Seguimiento con Pirámide 3D")
 
     st.write("""
-    Este ejercicio permite **seleccionar una región en una imagen** y superponer una pirámide 3D.
+    Este ejercicio permite **seleccionar un objeto** y seguirlo en tiempo real mediante la cámara,
+    superponiendo una pirámide simulada sobre él.
     """)
-    
-    st.warning("⚠️ El tracking en tiempo real con cámara no está disponible en Streamlit Cloud. Usa una imagen estática.")
 
     # Opción de entrada
-    opcion = st.radio("Selecciona el modo:", ["Subir imagen", "Tomar foto"])
-    
-    img_data = None
-    
-    if opcion == "Subir imagen":
-        img_data = st.file_uploader("Sube una imagen", type=["jpg", "jpeg", "png"])
-    else:
-        img_data = st.camera_input("Toma una foto")
+    img_data = st.file_uploader("Sube una imagen", type=["jpg", "jpeg", "png"])
+    if img_data is None:
+        img_data = st.camera_input("O usa la cámara para tomar una foto")
 
     if img_data is not None:
         # Cargar imagen
@@ -28,18 +22,15 @@ def ejercicio_10():
         frame = cv2.cvtColor(img, cv2.COLOR_RGB2BGR)
         h, w = frame.shape[:2]
         
-        st.image(img, caption="Imagen Original", use_container_width=True)
+        st.image(img, caption="Imagen Original")
         
-        st.write("### Selecciona la región para la pirámide:")
+        st.write("Selecciona la región para la pirámide:")
         
         # Sliders para seleccionar ROI
-        col1, col2 = st.columns(2)
-        with col1:
-            x = st.slider("X (izquierda)", 0, w-1, w//4, key="x_roi")
-            y = st.slider("Y (arriba)", 0, h-1, h//4, key="y_roi")
-        with col2:
-            roi_w = st.slider("Ancho", 10, w-x, w//2, key="w_roi")
-            roi_h = st.slider("Alto", 10, h-y, h//2, key="h_roi")
+        x = st.slider("X (izquierda)", 0, w-1, w//4)
+        y = st.slider("Y (arriba)", 0, h-1, h//4)
+        roi_w = st.slider("Ancho", 10, w-x, w//2)
+        roi_h = st.slider("Alto", 10, h-y, h//2)
         
         # Crear copia para dibujar
         output = frame.copy()
@@ -52,7 +43,7 @@ def ejercicio_10():
             [x, y]
         ], np.int32)
 
-        # Ápice de la pirámide (encima del objeto)
+        # Ápice de la pirámide
         apex = (x + roi_w // 2, max(0, y - roi_h // 2))
 
         # Dibujar base de la pirámide
@@ -69,23 +60,10 @@ def ejercicio_10():
         cv2.rectangle(output, (x, y), (x + roi_w, y + roi_h), (0, 255, 255), 2)
 
         # Mostrar resultado
-        st.write("### Resultado con Pirámide 3D:")
         output_rgb = cv2.cvtColor(output, cv2.COLOR_BGR2RGB)
-        st.image(output_rgb, use_container_width=True)
-        
-        # Botón de descarga
-        from io import BytesIO
-        result_img = Image.fromarray(output_rgb)
-        buf = BytesIO()
-        result_img.save(buf, format="PNG")
-        st.download_button(
-            label="📥 Descargar Resultado",
-            data=buf.getvalue(),
-            file_name="piramide_3d.png",
-            mime="image/png"
-        )
+        st.image(output_rgb, caption="Resultado con Pirámide 3D")
     else:
-        st.info("👆 Sube una imagen o toma una foto para comenzar.")
+        st.info("Por favor, sube una imagen o usa la cámara para comenzar.")
 
 if __name__ == "__main__":
     ejercicio_10()
