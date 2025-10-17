@@ -16,6 +16,11 @@ def ejercicio_3():
         img_bgr = cv2.cvtColor(img, cv2.COLOR_RGB2BGR)
         rows, cols = img_bgr.shape[:2]
 
+        # Guardar dimensiones en session_state para mantener los sliders
+        if 'img_cols' not in st.session_state:
+            st.session_state.img_cols = cols
+            st.session_state.img_rows = rows
+
         st.write("Selecciona la región a invertir (negativo):")
         x0 = st.slider("x0 (izquierda)", 0, cols-1, 0)
         y0 = st.slider("y0 (arriba)", 0, rows-1, 0)
