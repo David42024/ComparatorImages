@@ -13,8 +13,8 @@ def ejercicio_2():
         img_bgr = cv2.cvtColor(img, cv2.COLOR_RGB2BGR)
         rows, cols = img_bgr.shape[:2]
         # generar máscara de viñeta usando kernels gaussianos
-        kernel_x = cv2.getGaussianKernel(cols, 200)
-        kernel_y = cv2.getGaussianKernel(rows, 200)
+        kernel_x = cv2.getGaussianKernel(cols, 100)
+        kernel_y = cv2.getGaussianKernel(rows, 100)
         kernel = kernel_y * kernel_x.T
         mask = kernel / np.max(kernel)  # Normaliza para que el centro sea 1
         output = np.copy(img_bgr)

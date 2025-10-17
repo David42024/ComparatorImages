@@ -27,7 +27,7 @@ def ejercicio_4():
         img_bgr = cv2.cvtColor(img, cv2.COLOR_RGB2BGR)
         img_out = img_bgr.copy()
         gray = cv2.cvtColor(img_bgr, cv2.COLOR_BGR2GRAY)
-        mouth_rects = mouth_cascade.detectMultiScale(gray, scaleFactor=1.7, minNeighbors=11)
+        mouth_rects = mouth_cascade.detectMultiScale(gray, scaleFactor=1.1, minNeighbors=15)
         for (x, y, w, h) in mouth_rects:
             y = int(y - 0.15 * h)
             cv2.rectangle(img_out, (x, y), (x + w, y + h), (0, 255, 0), 3)

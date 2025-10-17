@@ -15,11 +15,15 @@ def ejercicio_1():
 
         # Primera traslación
         translation_matrix1 = np.float32([[1, 0, 70], [0, 1, 110]])
-        img_translation = cv2.warpAffine(img_bgr, translation_matrix1, (num_cols + 70, num_rows + 110))
+        new_width1 = num_cols + 70
+        new_height1 = num_rows + 110
+        img_translation = cv2.warpAffine(img_bgr, translation_matrix1, (new_width1, new_height1))
 
-        # Segunda traslación
+        # Segunda traslación - USAR LAS DIMENSIONES ACTUALES
         translation_matrix2 = np.float32([[1, 0, -30], [0, 1, -50]])
-        img_translation2 = cv2.warpAffine(img_translation, translation_matrix2, (num_cols + 70 + 30, num_rows + 110 + 50))
+        new_width2 = new_width1 + 30  # ← Usar new_width1, no num_cols
+        new_height2 = new_height1 + 50  # ← Usar new_height1, no num_rows
+        img_translation2 = cv2.warpAffine(img_translation, translation_matrix2, (new_width2, new_height2))
 
         # Borde envolvente (WRAP)
         translation_matrix3 = np.float32([[1, 0, 70], [0, 1, 110]])
@@ -27,7 +31,8 @@ def ejercicio_1():
 
         st.subheader("Resultados")
         st.image(cv2.cvtColor(img_bgr, cv2.COLOR_BGR2RGB), caption="Imagen Original")
-        st.image(cv2.cvtColor(img_translation2, cv2.COLOR_BGR2RGB), caption="Traslación General")
+        st.image(cv2.cvtColor(img_translation, cv2.COLOR_BGR2RGB), caption="Traslación 1")
+        st.image(cv2.cvtColor(img_translation2, cv2.COLOR_BGR2RGB), caption="Traslación 2")
         st.image(cv2.cvtColor(img_border_wrap, cv2.COLOR_BGR2RGB), caption="Con Borde Envolvente (WRAP)")
     else:
         st.info("Por favor, sube una imagen para comenzar.")

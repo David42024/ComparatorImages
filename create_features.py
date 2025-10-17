@@ -1,3 +1,5 @@
+#python create_features.py --samples cat images/cat --samples dog images/dog --codebook-file models/codebook.pkl --feature-map-file models/feature_map.pkl --num-clusters 100
+
 import argparse
 import os
 import pickle

@@ -1,94 +1,101 @@
 import streamlit as st
-import tensorflow as tf
+import cv2
 import numpy as np
 from PIL import Image
 import os
+import pickle
 
-# Variable global para almacenar el nombre del tensor de entrada
-# Se inicializará al cargar el modelo
-INPUT_TENSOR_NAME = None 
-# Nueva variable global para almacenar el nombre del tensor de salida
-OUTPUT_TENSOR_NAME = None
+def resize_to_size(img, size=(150, 150)):
+    """Redimensiona imagen a tamaño estándar"""
+    return cv2.resize(img, size)
+
+class Quantizer(object):
+    def __init__(self):
+        pass
+    
+    def get_feature_vector(self, img, kmeans, centroids):
+        """Extrae vector de características usando BOW"""
+        sift = cv2.SIFT_create()
+        keypoints, descriptors = sift.detectAndCompute(img, None)
+        
+        if descriptors is None:
+            return np.zeros((1, len(centroids)))
+        
+        labels = kmeans.predict(descriptors)
+        feature_vector = np.zeros(len(centroids))
+        for label in labels:
+            feature_vector[label] += 1
+        
+        feature_vector = feature_vector / np.sum(feature_vector)
+        return feature_vector.reshape(1, -1)
+
+class FeatureExtractor(object):
+    def __init__(self):
+        self.quantizer = Quantizer()
+    
+    def get_feature_vector(self, img, kmeans, centroids):
+        return self.quantizer.get_feature_vector(img, kmeans, centroids)
 
 def ejercicio_11():
-    # Línea eliminada: st.set_page_config(page_title="Clasificador de Perros y Gatos", layout="centered") 
-    
     st.title("Ejercicio 11 - Clasificador de Perros y Gatos 🐶🐱")
-    st.markdown("### Usando Red Neuronal Convolucional (CNN)")
+    st.markdown("### Usando Red Neuronal ANN con Bag of Visual Words")
 
-    # Ruta del modelo exportado
-    model_path = "modelo_entrenado/clasificador_gatos_perros_tf"
+    # Rutas de los modelos
+    codebook_path = "models/codebook.pkl"
+    ann_path = "models/ann.yaml"
+    le_path = "models/le.pkl"
     
-    # Inicialización de variables de estado
-    model = None
-    infer = None
-    input_shape = None
-    global INPUT_TENSOR_NAME
-    global OUTPUT_TENSOR_NAME
-
-    # Verificar que existe el modelo
-    if not os.path.exists(model_path):
-        st.error("⚠️ No se encontró el modelo entrenado")
-        st.info(f"📝 El modelo debe estar en la carpeta local: `{model_path}`")
+    # Verificar que existen los modelos
+    missing_files = []
+    if not os.path.exists(codebook_path):
+        missing_files.append(codebook_path)
+    if not os.path.exists(ann_path):
+        missing_files.append(ann_path)
+    if not os.path.exists(le_path):
+        missing_files.append(le_path)
+    
+    if missing_files:
+        st.error("⚠️ No se encontraron los modelos entrenados")
+        st.info("📝 Archivos faltantes:")
+        for file in missing_files:
+            st.code(file)
         st.markdown("""
-        ### Para entrenar un modelo:
-        1. Descarga el dataset de Kaggle: [Dogs vs Cats](https://www.kaggle.com/c/dogs-vs-cats/data)
-        2. Entrena un modelo con TensorFlow/Keras.
-        3. **Exporta el modelo** usando `model.export("modelo_entrenado/clasificador_gatos_perros_tf")` o `model.save()`.
+        ### Para entrenar el modelo:
+        ```bash
+        # Paso 1: Crear características y codebook
+        python create_features.py --samples cat images/cat --samples dog images/dog --codebook-file models/codebook.pkl --feature-map-file models/feature_map.pkl --num-clusters 300
+        
+        # Paso 2: Entrenar la red neuronal
+        python training.py --feature-map-file models/feature_map.pkl --training-set 0.75 --ann-file models/ann.yaml --le-file models/le.pkl
+        ```
         """)
         return
 
-    # Cargar modelo
+    # Cargar modelos
     try:
-        with st.spinner("Cargando modelo..."):
-            # Usamos tf.keras.models.load_model para cargar el SavedModel
-            model = tf.keras.models.load_model(model_path)
+        with st.spinner("Cargando modelos..."):
+            # Cargar red neuronal
+            ann = cv2.ml.ANN_MLP_load(ann_path)
             
-            # 1. Obtener la función de inferencia (ConcreteFunction)
-            infer = model.signatures["serving_default"]
+            # Cargar codificador de etiquetas
+            with open(le_path, 'rb') as f:
+                le = pickle.load(f)
             
-            # 2. Obtener el diccionario de inputs (segundo elemento de la tupla)
-            input_kwargs = infer.structured_input_signature[1]
+            # Cargar codebook
+            with open(codebook_path, 'rb') as f:
+                kmeans, centroids = pickle.load(f)
             
-            # 3. Extraer el nombre de la clave del input de forma dinámica
-            if not input_kwargs:
-                st.error("❌ La firma del modelo no tiene argumentos de entrada esperados.")
-                return
-
-            # Tomar el nombre del primer (y generalmente único) input
-            INPUT_TENSOR_NAME = list(input_kwargs.keys())[0]
-            
-            # 4. Extraer la forma de entrada
-            input_shape = input_kwargs[INPUT_TENSOR_NAME].shape
-
-            # 5. Extraer el nombre de la clave del output de forma dinámica
-            output_kwargs = infer.structured_outputs
-
-            if not output_kwargs:
-                st.error("❌ La firma del modelo no tiene argumentos de salida esperados.")
-                return
-
-            # Tomar el nombre del primer (y generalmente único) output
-            OUTPUT_TENSOR_NAME = list(output_kwargs.keys())[0]
-
-        st.success("✅ Modelo cargado correctamente")
-        st.write(f"**Nombre del tensor de entrada detectado:** `{INPUT_TENSOR_NAME}`")
-        st.write(f"**Nombre del tensor de salida detectado:** `{OUTPUT_TENSOR_NAME}`")
-        st.write(f"**Forma de entrada del modelo:** {input_shape}")
+            # Crear extractor de características
+            extractor = FeatureExtractor()
+        
+        st.success("✅ Modelos cargados correctamente")
+        st.write(f"**Número de clusters (vocabulario visual):** {len(centroids)}")
+        st.write(f"**Clases:** {le.classes_}")
+        
     except Exception as e:
-        # Esto capturará el error original del usuario y cualquier otro
-        st.error(f"❌ Error cargando el modelo: {e}")
-        st.caption("Verifica que el modelo fue exportado correctamente (SavedModel format).")
+        st.error(f"❌ Error cargando los modelos: {e}")
+        st.exception(e)
         return
-
-    # Aseguramos que tenemos la forma de entrada para el pre-procesamiento
-    if input_shape is None or len(input_shape) < 3:
-        st.error("❌ No se pudo determinar la forma de entrada del modelo.")
-        return
-
-    # Extraer el tamaño de la imagen (asumimos que es [batch, height, width, channels])
-    # Utilizamos el índice 1, asumiendo que el índice 0 es el tamaño del batch (None/1)
-    img_size = input_shape[1] 
 
     # --- Lógica de Clasificación ---
     
@@ -99,64 +106,112 @@ def ejercicio_11():
     )
 
     if uploaded_file is not None:
-        # Cargar y preparar la imagen PIL para el modelo
-        image = Image.open(uploaded_file).convert("RGB")
+        try:
+            # Método alternativo: guardar temporalmente
+            import tempfile
+            
+            # Crear archivo temporal
+            with tempfile.NamedTemporaryFile(delete=False, suffix='.jpg') as tmp_file:
+                tmp_file.write(uploaded_file.getvalue())
+                tmp_path = tmp_file.name
+            
+            # Cargar desde archivo temporal
+            image_pil = Image.open(tmp_path).convert("RGB")
+            image_cv = cv2.imread(tmp_path)
+            
+            # Eliminar archivo temporal
+            os.unlink(tmp_path)
+            
+            if image_cv is None:
+                st.error("❌ OpenCV no pudo leer la imagen")
+                return
+                
+        except Exception as e:
+            st.error(f"❌ No se pudo cargar la imagen: {e}")
+            st.warning("⚠️ Verifica que el archivo sea una imagen válida (JPG, PNG, WEBP)")
+            st.info(f"Tipo de archivo: {uploaded_file.type}")
+            st.info(f"Tamaño: {uploaded_file.size} bytes")
+            st.info(f"Nombre: {uploaded_file.name}")
+            return
         
         col1, col2 = st.columns(2)
         with col1:
-            # MODIFICACIÓN: Usamos el objeto uploaded_file (UploadedFile) directamente para el display de Streamlit,
-            # y usamos 'use_column_width' para compatibilidad.
             st.image(uploaded_file, caption="Imagen cargada", use_column_width=True)
 
         try:
-            # 1. Pre-procesamiento
-            # Redimensionar según la forma de entrada del modelo (ej. 150x150)
-            # USAMOS el objeto 'image' (PIL) que cargamos ANTES
-            img = image.resize((img_size, img_size))
-            img_array = np.array(img).astype("float32") / 255.0
-            # Añadir dimensión de lote (Batch: 1) -> (1, H, W, 3)
-            img_array = np.expand_dims(img_array, axis=0) 
-
-            # 2. Conversión a tensor y Predicción
-            input_tensor = tf.convert_to_tensor(img_array, dtype=tf.float32)
-            
-            # Usamos el nombre del tensor detectado para pasar el argumento:
-            pred_result = infer(**{INPUT_TENSOR_NAME: input_tensor})
-            
-            # MODIFICACIÓN: Usamos el nombre del tensor de salida detectado dinámicamente
-            pred = pred_result[OUTPUT_TENSOR_NAME].numpy()[0][0] 
-
-            # 3. Interpretar resultado
-            es_gato = pred < 0.5
-            clase = "🐱 Gato" if es_gato else "🐶 Perro"
-            # La confianza es la probabilidad de la clase predicha
-            confianza = (1.0 - pred) if es_gato else pred
+            with st.spinner("Clasificando..."):
+                # 1. Pre-procesamiento
+                img_resized = resize_to_size(image_cv)
+                
+                # 2. Extraer vector de características
+                feature_vector = extractor.get_feature_vector(
+                    img_resized, kmeans, centroids
+                )
+                
+                # Asegurar formato correcto
+                if feature_vector.ndim == 1:
+                    feature_vector = feature_vector.reshape(1, -1)
+                feature_vector = feature_vector.astype(np.float32)
+                
+                # 3. Predicción con la red neuronal
+                retval, predictions = ann.predict(feature_vector)
+                
+                # 4. Interpretar resultado
+                # predictions es un array [prob_clase1, prob_clase2]
+                pred_array = predictions[0]
+                
+                # Obtener las clases
+                label_words = le.classes_
+                
+                # Determinar clase predicha
+                if len(label_words) == 2:
+                    if pred_array[0] > pred_array[1]:
+                        clase_predicha = label_words[0]
+                        confianza = float(pred_array[0])
+                    else:
+                        clase_predicha = label_words[1]
+                        confianza = float(pred_array[1])
+                else:
+                    clase_idx = np.argmax(pred_array)
+                    clase_predicha = label_words[clase_idx]
+                    confianza = float(pred_array[clase_idx])
+                
+                # Normalizar confianza (valores de ANN pueden estar fuera de [0,1])
+                # Convertir de [-1, 1] a [0, 1] si usa sigmoid simétrica
+                confianza = (confianza + 1) / 2.0
+                confianza = np.clip(confianza, 0.0, 1.0)
+                
+                # Determinar emoji
+                emoji = "🐱" if clase_predicha == label_words[0] else "🐶"
+                clase_texto = f"{emoji} {clase_predicha.capitalize()}"
 
             with col2:
                 st.markdown("### 🧠 Resultado")
-                st.markdown(f"## **{clase}**") 
-                st.progress(confianza)
+                st.markdown(f"## **{clase_texto}**")
+                st.progress(float(confianza))
                 st.caption(f"Confianza: {confianza*100:.2f}%")
-                st.caption(f"Valor de predicción (Prob. Perro): {pred:.4f}")
-
-                if confianza > 0.8:
+                
+                if confianza > 0.7:
                     st.success("✅ Alta confianza")
-                elif confianza > 0.6:
+                elif confianza > 0.55:
                     st.info("⚡ Confianza moderada")
                 else:
                     st.warning("⚠️ Baja confianza - La imagen podría ser ambigua")
 
-            with st.expander("📊 Probabilidades detalladas"):
-                st.write("**Gato 🐱:**", f"{(1-pred)*100:.2f}%")
-                st.write("**Perro 🐶:**", f"{pred*100:.2f}%")
+            with st.expander("📊 Salidas de la red neuronal"):
+                st.write("**Valores crudos de la red:**")
+                for i, label in enumerate(label_words):
+                    st.write(f"{label}: {pred_array[i]:.4f}")
+                st.caption("Nota: La red usa función Sigmoide Simétrica (valores entre -1 y 1)")
 
         except Exception as e:
             st.error(f"❌ Error en la clasificación: {e}")
-            st.exception(e) # Muestra el traceback completo en Streamlit
+            st.exception(e)
 
     # Footer
     st.markdown("---")
-    st.caption("💡 **Tip:** Para mejores resultados, usa imágenes claras donde el animal sea el foco principal")
+    st.caption("💡 **Tip:** Este clasificador usa Bag of Visual Words (BOW) con descriptores SIFT")
+    st.caption("Para mejores resultados, usa imágenes claras donde el animal sea el foco principal")
 
 
 if __name__ == "__main__":

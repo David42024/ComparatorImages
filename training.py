@@ -1,3 +1,6 @@
+#python training.py --feature-map-file models/feature_map.pkl --training-set 0.75 --ann-file models/ann.yaml --le-file models/le.pkl
+
+
 import argparse
 import pickle
 import numpy as np
